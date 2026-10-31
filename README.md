@@ -58,7 +58,7 @@ Plus:
 ## Install
 
 ```powershell
-git clone https://github.com/<you>/magi-terminal.git
+git clone https://github.com/xuzhunzhi/magi-terminal.git
 cd magi-terminal
 
 # see what would change, write nothing
