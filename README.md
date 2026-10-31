@@ -7,7 +7,7 @@ and a one-shot PowerShell script that applies all of it to `settings.json`.
 Everything is driven by [`scripts/setup-magi-terminal.ps1`](scripts/setup-magi-terminal.ps1):
 idempotent, backs up before writing, and leaves your other profiles alone.
 
-![Canonical look](https://github.com/Chael-Chael/awesome-hermes-eva-skins/raw/main/assets/glow-amber.png)
+![MAGI — the readable profile, with the CRT frame, scanlines and pixel font](assets/magi-terminal.png)
 
 ---
 
