@@ -47,6 +47,8 @@ Plus:
 * `Shift+F10` toggles the shader, `Shift+F11` toggles focus mode
 * `compatibility.ambiguousWidth: wide` — see [CJK punctuation](#cjk-punctuation) below
 * the default profile is set to `MAGI`
+* the profiles launch `pwsh.exe -NoLogo`, so the engine banner does not sit above
+  whatever your `$PROFILE` prints
 
 ## Requirements
 

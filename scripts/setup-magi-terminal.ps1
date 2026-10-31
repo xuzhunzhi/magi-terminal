@@ -128,7 +128,10 @@ function New-ProfileTemplate {
         useAcrylic                         = $false
     }
 
-    if ($PwshPath) { $profile['commandline'] = $PwshPath }
+    # -NoLogo suppresses the engine banner ("PowerShell 7.6.9" + copyright). That
+    # banner is printed before $PROFILE runs, so without this it sits above any
+    # greeting a profile prints. Only these two profiles are affected.
+    if ($PwshPath) { $profile['commandline'] = "$PwshPath -NoLogo" }
 
     return [pscustomobject]$profile
 }
