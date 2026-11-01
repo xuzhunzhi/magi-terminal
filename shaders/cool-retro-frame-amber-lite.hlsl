@@ -48,9 +48,10 @@ cbuffer PixelShaderSettings
 #define CRT_BACKGROUND_COLOR float3(0.150f, 0.075f, 0.012f)
 #define CRT_CHROMA 0.20f
 #define CRT_SCREEN_BRIGHTNESS 1.3f
-#define CRT_BLACK_FLOOR float3(0.055f, 0.038f, 0.013f)
+#define CRT_GAIN 1.35f
+#define CRT_BLACK_FLOOR float3(0.075f, 0.052f, 0.018f)
 #define CRT_DIM_TEXT_LUMA_GATE 0.075f
-#define CRT_DIM_TEXT_LUMA_FLOOR 0.28f
+#define CRT_DIM_TEXT_LUMA_FLOOR 0.33f
 #define OVERSCAN_PERCENTAGE 0.018f
 #define FRAME_COLOR float3(0.030f, 0.026f, 0.020f)
 #define BEZEL_COLOR float3(0.075f, 0.060f, 0.043f)
@@ -177,7 +178,7 @@ float4 main(float4 pos : SV_POSITION, float2 tex : TEXCOORD) : SV_TARGET
         sourceColor = shaderTexture.Sample(samplerState, sampleTex);
     }
 
-    float3 color = ConvertWithChroma(sourceColor.rgb) * CRT_SCREEN_BRIGHTNESS;
+    float3 color = ConvertWithChroma(sourceColor.rgb) * CRT_SCREEN_BRIGHTNESS * CRT_GAIN;
 
 #if ABERRATION_ENABLE
     if (inside)
