@@ -277,6 +277,16 @@ function Update-SettingsFile {
         Set-Property -Object $settings.profiles -Name 'list' -Value @()
     }
 
+    # Without an explicit startingDirectory Windows Terminal inherits the working
+    # directory of whatever launched it, which is usually C:\Windows\System32
+    # (Start menu, taskbar, other apps). Pin it to the home directory.
+    if (-not $settings.profiles.PSObject.Properties['defaults']) {
+        Set-Property -Object $settings.profiles -Name 'defaults' -Value ([pscustomobject]@{})
+    }
+    if (-not $settings.profiles.defaults.PSObject.Properties['startingDirectory']) {
+        Set-Property -Object $settings.profiles.defaults -Name 'startingDirectory' -Value '%USERPROFILE%'
+    }
+
     # Both profiles use the lite shaders (~20 texture taps/pixel) unless
     # -FullShader is passed, in which case they keep the upstream 174-tap originals.
     $everydayShader = $ShaderLite
