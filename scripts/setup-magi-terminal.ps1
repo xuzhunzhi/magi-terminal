@@ -43,6 +43,7 @@ param(
     [switch]$SkipFonts,
     [switch]$SkipShaders,
     [switch]$KeepDefaultProfile,
+    [switch]$FullShader,
     [switch]$DryRun
 )
 
@@ -60,6 +61,7 @@ $FontFace       = 'Ark Pixel 12px Mono zh_cn, Ark Pixel 12px Mono ja, Ark Pixel 
 $FontSize       = 18
 $ShaderReadable = 'cool-retro-frame-readable.hlsl'
 $ShaderAmber    = 'cool-retro-frame-amber.hlsl'
+$ShaderLite     = 'cool-retro-frame-lite.hlsl'
 
 $ShaderDir = Join-Path $env:LOCALAPPDATA 'WindowsTerminalShaders'
 $FontDir   = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Fonts'
@@ -148,7 +150,7 @@ function Set-Property {
 function Install-Shaders {
     if ($SkipShaders) { Write-Note 'Skipping shaders (-SkipShaders).'; return }
 
-    $needed = @($ShaderAmber, $ShaderReadable)
+    $needed = @($ShaderAmber, $ShaderReadable, $ShaderLite)
     $missing = @($needed | Where-Object { -not (Test-Path -LiteralPath (Get-ShaderPath -FileName $_)) })
 
     if ($missing.Count -eq 0) {
@@ -274,9 +276,14 @@ function Update-SettingsFile {
         Set-Property -Object $settings.profiles -Name 'list' -Value @()
     }
 
+    # The everyday profile uses the lite shader (~20 texture taps/pixel) unless
+    # -FullShader is passed, in which case it keeps the upstream 174-tap original.
+    $everydayShader = $ShaderLite
+    if ($FullShader) { $everydayShader = $ShaderReadable }
+
     $wanted = @(
-        (New-ProfileTemplate -Name $NameAmber    -Guid $GuidAmber    -ShaderFile $ShaderAmber    -PwshPath $pwshPath)
-        (New-ProfileTemplate -Name $NameReadable -Guid $GuidReadable -ShaderFile $ShaderReadable -PwshPath $pwshPath)
+        (New-ProfileTemplate -Name $NameAmber    -Guid $GuidAmber    -ShaderFile $ShaderAmber      -PwshPath $pwshPath)
+        (New-ProfileTemplate -Name $NameReadable -Guid $GuidReadable -ShaderFile $everydayShader   -PwshPath $pwshPath)
     )
 
     $list = @($settings.profiles.list)

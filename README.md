@@ -47,7 +47,7 @@ Two Windows Terminal profiles that share one amber CRT look:
 
 | Profile | Shader | Use it for |
 | --- | --- | --- |
-| `MAGI` | `cool-retro-frame-readable.hlsl` | everyday work — keeps most of the original hues |
+| `MAGI` | `cool-retro-frame-lite.hlsl` | everyday work — keeps most of the original hues, ~9x cheaper |
 | `MAGI·AMBER` | `cool-retro-frame-amber.hlsl` | screenshots, recording, NERV monochrome vibes — maps almost everything to amber |
 
 Plus:
@@ -58,6 +58,31 @@ Plus:
 * the default profile is set to `MAGI`
 * the profiles launch `pwsh.exe -NoLogo`, so the engine banner does not sit above
   whatever your `$PROFILE` prints
+
+## Performance
+
+The upstream shader blurs the terminal texture with a 13x13 Gaussian to get the
+phosphor glow. That is 169 texture taps per pixel, plus a `GetDimensions` query
+per pixel and 169 `exp()` calls, on top of the base sample and the chromatic
+aberration:
+
+| Work per pixel | Upstream `readable` | This repo's `lite` |
+| --- | --- | --- |
+| source sample | 1 | 1 |
+| chromatic aberration | 2 | 2 |
+| glow | **169** (13x13 Gaussian) | **17** (centre + two 8-tap rings) |
+| hot phosphor trail | 2 | 0 (switchable) |
+| **total taps** | **174** | **20** |
+
+`cool-retro-frame-lite.hlsl` keeps the frame, scanlines, vignette, grain, refresh
+line, amber mapping, colour preservation and a box-blur glow — at roughly 1/9th
+of the texture bandwidth. It also reads `Resolution` from the constant buffer
+instead of calling `GetDimensions`, and has no per-sample `exp()`.
+
+Pass `-FullShader` to keep the upstream 174-tap shader instead. Either way both
+files are installed, so you can switch by editing
+`experimental.pixelShaderPath` on the profile, or press `Shift+F10` to turn the
+shader off entirely and compare.
 
 ## Requirements
 
@@ -98,6 +123,7 @@ The shaders ship with this repository, so no download is needed for those.
 | `-SettingsPath <file>` | patch that `settings.json` instead of the installed packages |
 | `-FontSource <dir>` | directory holding the four Ark Pixel TTFs |
 | `-SkipFonts` / `-SkipShaders` | skip those steps |
+| `-FullShader` | use the upstream 174-tap `readable` shader instead of the 20-tap `lite` one |
 | `-KeepDefaultProfile` | do not change `defaultProfile` |
 | `-DryRun` | print the plan, write nothing |
 
