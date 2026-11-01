@@ -30,6 +30,15 @@ If you redistribute or modify the shaders, keep them.
 The profile names (`MAGI`, `MAGI·AMBER`) and this installer script are the only parts
 written for this repository.
 
+The upstream repository ships its own `scripts/install-windows.ps1`, which is a
+different (and much larger) installer covering the Hermes Agent half as well. Two
+first-run bugs in that script — `settings.json` written with `schemes` as an object
+instead of an array, and the bundled fonts copied but never loaded — were fixed
+upstream in
+[Chael-Chael/awesome-hermes-eva-skins#1](https://github.com/Chael-Chael/awesome-hermes-eva-skins/pull/1).
+This repository's script was written around the same problem and is not affected by
+either.
+
 ---
 
 ## What you get
