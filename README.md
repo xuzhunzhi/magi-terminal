@@ -47,8 +47,8 @@ Two Windows Terminal profiles that share one amber CRT look:
 
 | Profile | Shader | Use it for |
 | --- | --- | --- |
-| `MAGI` | `cool-retro-frame-lite.hlsl` | everyday work — keeps most of the original hues, ~9x cheaper |
-| `MAGI·AMBER` | `cool-retro-frame-amber.hlsl` | screenshots, recording, NERV monochrome vibes — maps almost everything to amber |
+| `MAGI` | `cool-retro-frame-lite.hlsl` | everyday work — keeps most of the original hues, 20 texture taps/pixel |
+| `MAGI·AMBER` | `cool-retro-frame-amber-lite.hlsl` | screenshots, recording, NERV monochrome vibes — maps almost everything to amber |
 
 Plus:
 
@@ -79,8 +79,13 @@ line, amber mapping, colour preservation and a box-blur glow — at roughly 1/9t
 of the texture bandwidth. It also reads `Resolution` from the constant buffer
 instead of calling `GetDimensions`, and has no per-sample `exp()`.
 
-Pass `-FullShader` to keep the upstream 174-tap shader instead. Either way both
-files are installed, so you can switch by editing
+`cool-retro-frame-amber-lite.hlsl` is the same treatment for the amber profile. It
+has no colour preservation (everything converges on the phosphor), a wider glow
+ring to match the amber shader's larger blur sigma, and stronger chromatic
+aberration — same 20 taps.
+
+Pass `-FullShader` to keep the upstream 174-tap shaders instead. Either way both
+flavours are installed, so you can switch by editing
 `experimental.pixelShaderPath` on the profile, or press `Shift+F10` to turn the
 shader off entirely and compare.
 
