@@ -166,3 +166,13 @@ Designed and authored upstream by
 [Chael-Chael](https://github.com/Chael-Chael) and the contributors of
 `awesome-hermes-eva-skins`. Go star that repository — the skins, the fonts, the
 braille banner tooling and the shaders all come from there.
+
+## Docs
+
+- [`docs/wt-fork-crt.md`](docs/wt-fork-crt.md) — design and progress for turning a
+  Windows Terminal fork into a whole-window CRT monitor: the sidebar-as-a-pane
+  approach, the upstream code that has to change, the build toolchain, and the
+  network restrictions on this machine.
+- [`scripts/MagiPrompt.ps1`](scripts/MagiPrompt.ps1) — the shell side of the setup
+  (prompt, greeting, UTF-8 console fix, `uu` helper). Copy it to
+  `~/Documents/PowerShell/` and dot-source it from your profile.
