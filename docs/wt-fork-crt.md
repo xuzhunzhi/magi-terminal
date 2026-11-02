@@ -29,16 +29,18 @@
 
 ---
 
-## 2. 当前状态（2026-11-01 17:00）
+## 2. 当前状态（2026-11-02 17:00）
 
 | 项 | 状态 |
 |---|---|
 | Fork | ✅ `xuzhunzhi/terminal`（fork 自 `microsoft/terminal`） |
-| 本地克隆 | ✅ `C:\Users\XuZhunzhi\terminal`（`--depth 1`） |
+| 本地克隆 | ✅ `C:\Users\XuZhunzhi\terminal`（`--depth 1`，main） |
 | 编译工具链 | ✅ MSVC 14.51.36231 / SDK 10.0.26100.0 / MSBuild 18 |
-| vcpkg | ⏳ VS Installer 安装中（用户手动勾选 `Microsoft.VisualStudio.Component.Vcpkg`） |
-| 首次完整编译 | ❌ 见 §6 |
+| vcpkg | ✅ 已装（VS Installer 组件 `Microsoft.VisualStudio.Component.Vcpkg`，装在 `...\18\BuildTools\VC\vcpkg`） |
+| ATL / MFC | ❌ **未装**（`VC\Tools\MSVC\14.51.36231\atlmfc` 不存在），见 §6.4 |
+| 首次完整编译 | 🔄 见 §6.3（vcpkg 依赖阶段） |
 | 侧边栏方案 | ✅ 已定：终端 pane 方案（§4） |
+| 网络 | ⚠️ `github.com:443` **2026-11-02 实测可达**（前一天不通），vcpkg 因此能拉 registry |
 
 ---
 
@@ -163,12 +165,40 @@ msbuild OpenConsole.slnx /p:Configuration=Release /p:Platform=x64 /t:Terminal\Ca
 Invoke-OpenConsoleBuild /p:Configuration=Release /p:Platform=x64 /m /v:m
 ```
 
-### 6.3 已知阻塞
+### 6.3 2026-11-02 的实测进度
+
+实际执行的命令：
+
+```powershell
+Set-Location $env:USERPROFILE\terminal
+Import-Module .\tools\OpenConsole.psm1 -Force
+Set-MsBuildDevEnvironment
+Invoke-OpenConsoleBuild /p:Configuration=Release /p:Platform=x64 /t:Terminal\CascadiaPackage /m /v:m `
+    2>&1 | Tee-Object "$env:TEMP\wtbuild2.log" | Select-Object -Last 5
+```
+
+日志：`%TEMP%\wtbuild2.log`（会话结束时约 30 KB，仍在增长）
+
+走过的阶段：
+
+1. `nuget restore` ✅（源 `pkgs.dev.azure.com`）
+2. 编译 `src\types\lib\types.vcxproj` ✅（C# 类型库）
+3. **vcpkg 装依赖** 🔄 —— 打到了 `--feature=terminal` 那一组，按顺序编 `fmt` → `jsoncpp` …
+   命令形如：
+   ```
+   "…\VC\vcpkg\vcpkg.exe" install --triplet x64-windows-static
+        --x-manifest-root=<repo> --x-install-root=<repo>\obj\x64\vcpkg --x-feature=terminal
+   ```
+   输出目录 `obj\x64\vcpkg\`
+4. 之后才是 MSBuild 编 WT 本体
+
+### 6.4 已知阻塞
 
 | 错误 | 原因 | 解法 |
 |---|---|---|
-| `MSB4019: 找不到 dep\vcpkg\scripts\buildsystems\msbuild\vcpkg.props` | VS 没装 vcpkg 组件，`dep\vcpkg` 也不存在 | VS Installer 勾选 **C++ vcpkg 包管理器** |
+| `MSB4019: 找不到 dep\vcpkg\scripts\buildsystems\msbuild\vcpkg.props` | VS 没装 vcpkg 组件，`dep\vcpkg` 也不存在 | ✅ 已解决：VS Installer 装 **C++ vcpkg 包管理器** |
 | `MSB3644: 找不到 .NETFramework,Version=v4.7.2` | 缺目标包 | 只影响 `vtapp`/`UIA.Tests`，只编 `CascadiaPackage` 可绕过；要全编就装 .NET 4.7.2 Developer Pack |
+| `warning CS1668: LIB 环境变量 … atlmfc\lib\x64 无效` | **ATL/MFC 组件未安装**（`VC\Tools\MSVC\14.51.36231\atlmfc` 不存在） | 目前只是警告；若后面报 `atlbase.h`/`atlstr.h` 找不到，就在 VS Installer 勾 **C++ ATL for latest build tools**，再重跑 |
 
 `common.build.pre.props:289-290` 决定 vcpkg 位置：
 
@@ -177,29 +207,29 @@ Invoke-OpenConsoleBuild /p:Configuration=Release /p:Platform=x64 /m /v:m
 <VcpkgRoot Condition="'$(VcpkgRoot)'=='' or !Exists('$(VcpkgRoot)\vcpkg.exe')">$(SolutionDir)\dep\vcpkg</VcpkgRoot>
 ```
 
-> ⚠️ 不要尝试 `git clone microsoft/vcpkg` + bootstrap：bootstrap 要从 github.com 下 vcpkg.exe，这台机器直连 github.com 不通（只有 `api.github.com` 和 SSH 可用）。
+> ⚠️ 优先用 VS 自带的 vcpkg，不要 `git clone microsoft/vcpkg` + bootstrap：bootstrap 要从 github.com 下 vcpkg.exe，网络一断就废。
 
 ---
 
-## 7. 网络限制（换沙箱后仍适用）
+## 7. 网络限制（换沙箱后仍适用，**每天实测再下结论**）
 
-| 目标 | 可用性 |
-|---|---|
-| `github.com` HTTPS | ❌ 超时 |
-| `github.com` SSH（`git@github.com:`） | ✅ |
-| `api.github.com` | ✅（`gh` CLI 正常） |
-| `download.visualstudio.microsoft.com` | ✅ |
-| `pkgs.dev.azure.com`（WT 的 nuget 源） | ✅ |
-| `download.microsoft.com`（VS 组件清单） | ✅ |
+| 目标 | 2026-11-01 | 2026-11-02 |
+|---|---|---|
+| `github.com` HTTPS | ❌ 超时 | ✅ 可用 |
+| `github.com` SSH（`git@github.com:`） | ✅ | ✅ |
+| `api.github.com` | ✅ | ✅ |
+| `download.visualstudio.microsoft.com` | ✅ | ✅ |
+| `pkgs.dev.azure.com`（WT 的 nuget 源） | ✅ | ✅ |
+| `download.microsoft.com`（VS 组件清单） | ✅ | ✅ |
 
-git 全局已配置：`git config url."git@github.com:".insteadOf "https://github.com/"`（仅 `terminal` 仓库内）。
+`terminal` 仓库内已配置：`git config url."git@github.com:".insteadOf "https://github.com/"`。
 
 ---
 
 ## 8. 接下来的任务（按顺序）
 
-1. [ ] VS Installer 装完 vcpkg 组件 → 验证 `C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\vcpkg\vcpkg.exe`
-2. [ ] 编译原版 `CascadiaPackage`，确认能出包、能运行（**不改一行代码**）
+1. [x] VS Installer 装 vcpkg 组件 → `VC\vcpkg\vcpkg.exe` 已存在
+2. [ ] 编译原版 `CascadiaPackage`，确认能出包、能运行（**不改一行代码**） ← **当前卡在这里**
 3. [ ] 手动验证 pane 侧边栏：用 `split-pane` 左开一个 pane 跑任意 TUI，确认**它有 CRT 效果**（这是方案成立的前提）
 4. [ ] 原型：写侧边栏 TUI（列标签 + 回车切换），用 `wt focus-tab` 打通
 5. [ ] fork 改动：根布局（外壳 Border + Grid[sidebar|content]）
@@ -240,3 +270,76 @@ git 全局已配置：`git config url."git@github.com:".insteadOf "https://githu
 
 **本工作的定位**：个人 fork、本地修改、自用，属于 non-public local experiments，允许。
 **不要**把这里的 AI 生成代码直接提到 `microsoft/terminal` 上游。
+
+---
+
+## 11. 标题变量功能：等上游，别自己做
+
+Issue：<https://github.com/microsoft/terminal/issues/1320>（`${index}` 之类的标签标题变量）
+
+**2026-11-01 维护者 zadjii-msft 在 issue 里回复：**
+
+> I also don't really need anyone else to burn tokens on this. I've already got
+> something that LLMs whipped up. I just need someone (me) to actually take the
+> time to review and polish this before actually sending it for real review.
+> main...dev/migrie/f/title-variables
+> Because obviously, that branch can't be sent in the state it's in.
+
+人话：**功能他已经写完（LLM 帮忙的），缺的是他本人审稿，别人不用再动手，也不用再让 AI 写方案。**
+
+### 分支内容（2026-11-02 查证）
+
+分支 `dev/migrie/f/title-variables`，4 个提交，约 1500 行 / 40 文件：
+
+| SHA | 日期 | 说明 |
+|---|---|---|
+| `15283b2` | 2026-09-21 | `LLMs write a title format feature`（主体实现） |
+| `c4f7098` | 2026-09-21 | 依赖更新 |
+| `2122d5c` | 2026-09-21 | `use constants` |
+| `6daa704` | 2026-10-16 | `some code review`（+ConptyTitleTests 141 行、TabTests +279、重写 `TitleFormat.h`、`scratch/title-variables-review.md` 287 行） |
+
+新增核心文件：
+
+```
+src/cascadia/inc/TitleFormat.h                             +178
+src/cascadia/TerminalSettingsModel/TitleFormatSettings.h   +55
+doc/cascadia/RuntimeTitleVariables.md                      +82
+```
+
+改动还散在 `Tab.cpp`(+128)、`TerminalPage.cpp`(+57)、`ConptyConnection.cpp`(+36)、
+`ControlCore.cpp`、`CascadiaSettings.cpp`，外加 `profiles.schema.json`、resw 本地化字符串、
+`TitleFormatTests.cpp`(+174)、`TabTests.cpp`、`TerminalApiTest.cpp`。
+
+### 结论
+
+- 这是"标题格式字符串 + 运行时变量"引擎，**比最初的 `${index}` 需求大得多**
+- 状态是 **WIP 未合并**，最后一次提交 2026-10-16
+- **不要**去 issue 里回复、不要提 PR（`AGENTS.md` + 维护者明确表态）
+- 如果以后 fork 编通了想先要这个功能：cherry-pick 上面 4 个 SHA 即可，自带测试与文档，但记住是未审完的代码
+
+---
+
+## 12. 会话交接点（2026-11-02 17:05）
+
+写这份文档时的实际机器状态：
+
+| 项 | 状态 |
+|---|---|
+| `C:\Users\XuZhunzhi\terminal` | fork 克隆，**未修改任何源码**（`git status` 干净） |
+| 正在跑的后台任务 | 一次 `Invoke-OpenConsoleBuild`（vcpkg 依赖阶段），日志 `%TEMP%\wtbuild2.log` |
+| VS Installer | vcpkg 组件已装完；窗口可能还开着，关掉无妨 |
+| 已恢复的终端能力 | CRT shader、亮度 1.35、`uu`、UTF-8 编码修正 |
+
+**接续方式**（新会话从这里开始）：
+
+```powershell
+cd $env:USERPROFILE\terminal
+Get-Content "$env:TEMP\wtbuild2.log" -Tail 30     # 先看上一步跑到哪、有没有报错
+
+Import-Module .\tools\OpenConsole.psm1 -Force
+Set-MsBuildDevEnvironment
+Invoke-OpenConsoleBuild /p:Configuration=Release /p:Platform=x64 /t:Terminal\CascadiaPackage /m /v:m
+```
+
+成功标志：`src\cascadia\CascadiaPackage\AppPackages\` 下出现 `*.msixbundle`，
+或 `bin\x64\Release\WindowsTerminal\` 下有可执行文件。之后按 §8 第 3 步验证 pane 侧边栏。
